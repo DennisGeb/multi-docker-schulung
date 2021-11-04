@@ -1,0 +1,23 @@
+sudo: required
+services:
+  - docker
+
+before_install:
+  - docker build -t degeb/multi-docker-react-test -f ./client/Dockerfile.dev ./client # ./client is buildcontext here instead of .
+
+script:
+   - docker run -e CI=true degeb/multi-docker-react-test npm test
+
+after-success: 
+  # build files
+  - docker build -t degeb/multi-docker-client ./client # dont specify docker file because default name Dockerfile is used
+  - docker build -t degeb/multi-docker-nginx ./nginx
+  - docker build -t degeb/multi-docker-server ./server
+  - docker build -t degeb/multi-docker-worker ./worker
+  # Log in to the docker CLI in one single command echo docker pw and emmit it into stdin for docker login pw prompt
+  - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_ID" --password-stdin
+  # Take images and push to dockerhub
+  - docker push degeb/multi-docker-client
+  - docker push degeb/multi-docker-nginx
+  - docker push degeb/multi-docker-server
+  - docker push degeb/multi-docker-worker
