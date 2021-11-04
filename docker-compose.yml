@@ -1,0 +1,51 @@
+version: '3'
+services:
+  postgres:
+    image: 'postgres:latest'
+    environment:
+      - POSTGRES_PASSWORD=postgres_password
+  redis:
+    image: 'redis:latest'
+  api:
+    build:
+      dockerfile: Dockerfile.dev # Just name of dockerfile
+      context: ./server # folder to search for dockerfile; use all files inside to build image
+    volumes:
+      - /app/node_modules # dont overwrite this folder; dont redirect
+      - ./server:/app # redirect to ./server every time trying to access /app except node_modules
+    environment: # environment variables needed in server/keys.js
+      - REDIS_HOST=redis # takes host name from service with name redis
+      - REDIS_PORT=6379 # default redis port -> can be found in docker hub redis doc
+      - PGUSER=postgres # PG variables -> default values also in dockerhub doc for postgres
+      - PGHOST=postgres # name of postgres service of this file
+      - PGDATABASE=postgres
+      - PGPASSWORD=postgres_password # default postgres pw
+      - PGPORT=5432
+  client:
+    stdin_open: true
+    build:
+      dockerfile: Dockerfile.dev
+      context: ./client
+    volumes:
+      - /app/node_modules
+      - ./client:/app
+  worker:
+    build:
+      dockerfile: Dockerfile.dev
+      context: ./worker
+    volumes:
+      - /app/node_modules
+      - ./worker:/app
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+  nginx:
+    restart: always # this service should always restart after crash to enable routing everytime
+    build:
+      dockerfile: Dockerfile.dev
+      context: ./nginx
+    ports:
+      - '3050:80'
+
+# docker-compose down  && docker-compose up --build
+# env variables variable=value -> set at runtime; setup inside the container; variable -> set at runtime -> value taken from your computer; example secret api key
